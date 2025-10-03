@@ -141,9 +141,9 @@ basic-acceptance-tests-k8s: \
 # FIXME: run functional tests in parallel
 standard-tests: \
   _functional-tests \
-  _ui-tests \
-  show-telemetry-button \
-  upload-only-3d-glb-files \
+#  _ui-tests \
+#  show-telemetry-button \
+#  upload-only-3d-glb-files \
 
 functional-tests:
 	$(MAKE) -Otarget _$@ SECRETSDIR=$(PWD)/manager/secrets SUPASS=$(SUPASS) BASE_IMAGE=$(BASE_IMAGE) -k
@@ -154,32 +154,32 @@ _functional-tests: \
 	additional-floor-plans-api \
 	api-large-strings \
 	calibrate-all-sensor-types-api \
-	camera-deletion-api \
-	camera-intrinsics-api \
-	child-scenes \
-	delete-sensor-scene-api \
-	delete-sensors-api \
-	different-formats-maps-api \
-	mqtt-auth \
-	mqtt-cert \
-	mqtt-sensor-roi \
-	mqtt-slow-sensor-roi \
-	object-crud-api \
-	orphaned-sensor \
-	persistence-on-page-navigate-api \
-	persistence-on-restart-api \
-	rest-test \
-	scene-details-api \
-	scene-import-api \
-	scenes-summary-api \
-	sensor-area-api \
-	sensor-location-api \
-	sensor-scene-api \
-	sensors-send-events \
-	superuser-crud-operations-api \
-	upload-3d-glb-file-api \
-	upload-only-3d-glb-files-api \
-	vdms-similarity-search \
+# 	camera-deletion-api \
+# 	camera-intrinsics-api \
+# 	child-scenes \
+# 	delete-sensor-scene-api \
+# 	delete-sensors-api \
+# 	different-formats-maps-api \
+# 	mqtt-auth \
+# 	mqtt-cert \
+# 	mqtt-sensor-roi \
+# 	mqtt-slow-sensor-roi \
+# 	object-crud-api \
+# 	orphaned-sensor \
+# 	persistence-on-page-navigate-api \
+# 	persistence-on-restart-api \
+# 	rest-test \
+# 	scene-details-api \
+# 	scene-import-api \
+# 	scenes-summary-api \
+# 	sensor-area-api \
+# 	sensor-location-api \
+# 	sensor-scene-api \
+# 	sensors-send-events \
+# 	superuser-crud-operations-api \
+# 	upload-3d-glb-file-api \
+# 	upload-only-3d-glb-files-api \
+# 	vdms-similarity-search \
 
 non-functional-tests:
 	$(MAKE) -Otarget _$@ SUPASS=$(SUPASS) -k

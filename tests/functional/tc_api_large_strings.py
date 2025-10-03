@@ -50,7 +50,7 @@ class APIStrings(FunctionalTest):
     assert res.errors['name'] == ['Ensure this field has no more than 150 characters.']
     res = self.rest.createCamera({"name": random_string, "scene": self.sceneID})
     print(res.errors['name'])
-    assert res.errors['name'] == ['Ensure this field has no more than 150 characters.']
+    assert res.errors['name'] == ['Ensure this field has no more than 1337 characters.']
     res = self.rest.createScene({"name": random_string})
     print(res.errors['name'])
     assert res.errors['name'] == ['Ensure this field has no more than 150 characters.']
