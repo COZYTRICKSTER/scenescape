@@ -107,11 +107,11 @@ jobs:
 
       - name: Upload Test Reports
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: tests-reports
           path: |
-            tests/
+            reports/test_reports/**/*.xml
 
       - name: Upload Test Logs
         if: always()
@@ -120,6 +120,13 @@ jobs:
           name: tests-logs
           path: |
             **/test_data/**/*.log
+
+      - name: "Debug: Show XML report"
+        if: always()
+        run: |
+          echo "---- Begin XML ----"
+          cat results/reports/test_reports/add-delete-3d-object-api.xml || echo "File not found"
+          echo "---- End XML ----"
 
       - name: "Stop all running Docker containers"
         if: always()
