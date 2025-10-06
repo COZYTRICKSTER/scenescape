@@ -111,8 +111,7 @@ jobs:
         with:
           name: tests-reports
           path: |
-            tests/**/test_reports/**/*.html
-            tests/**/test_reports/**/*.xml
+            tests/
 
       - name: Upload Test Logs
         if: always()
@@ -144,60 +143,57 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Test Reports
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: tests-reports
           path: results
-        continue-on-error: true
+
+      - name: "Debug: List downloaded files"
+        run: |
+          echo "Listing files in results:"
+          find results -type f
 
       - name: Generate Summary
         run: |
           echo "## 📊 Test Summary" >> $GITHUB_STEP_SUMMARY
 
-          if [ -d results ]; then
-            total_tests=0
-            total_failures=0
-            total_errors=0
-            total_skipped=0
+          total_tests=0
+          total_failures=0
+          total_errors=0
+          total_skipped=0
 
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### ❌ Failed / 💥 Errored / ⚠️ Skipped Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ❌ Failed / 💥 Errored / ⚠️ Skipped Tests" >> $GITHUB_STEP_SUMMARY
 
-            for file in results/**/*.xml; do
-              [ -f "$file" ] || continue
-              tests=$(xmllint --xpath "string(//testsuite/@tests)" "$file" 2>/dev/null || echo 0)
-              failures=$(xmllint --xpath "string(//testsuite/@failures)" "$file" 2>/dev/null || echo 0)
-              errors=$(xmllint --xpath "string(//testsuite/@errors)" "$file" 2>/dev/null || echo 0)
-              skipped=$(xmllint --xpath "string(//testsuite/@skipped)" "$file" 2>/dev/null || echo 0)
+          for file in $(find results -type f -name "*.xml"); do
+            tests=$(xmllint --xpath "string(//testsuite/@tests)" "$file" 2>/dev/null || echo 0)
+            failures=$(xmllint --xpath "string(//testsuite/@failures)" "$file" 2>/dev/null || echo 0)
+            errors=$(xmllint --xpath "string(//testsuite/@errors)" "$file" 2>/dev/null || echo 0)
+            skipped=$(xmllint --xpath "string(//testsuite/@skipped)" "$file" 2>/dev/null || echo 0)
 
-              total_tests=$((total_tests + tests))
-              total_failures=$((total_failures + failures))
-              total_errors=$((total_errors + errors))
-              total_skipped=$((total_skipped + skipped))
+            total_tests=$((total_tests + tests))
+            total_failures=$((total_failures + failures))
+            total_errors=$((total_errors + errors))
+            total_skipped=$((total_skipped + skipped))
 
-              # List non-passed tests
-              xmllint --xpath '//testcase[failure or error or skipped]' "$file" 2>/dev/null \
-                | xmllint --format - \
-                | grep "<testcase" \
-                | sed -E 's/.*classname="([^"]*)" name="([^"]*)".*/- \1::\2/' >> $GITHUB_STEP_SUMMARY || true
-            done
+            xmllint --xpath '//testcase[failure or error or skipped]' "$file" 2>/dev/null \
+              | xmllint --format - \
+              | grep "<testcase" \
+              | sed -E 's/.*classname="([^"]*)" name="([^"]*)".*/- \1::\2/' >> $GITHUB_STEP_SUMMARY || true
+          done
 
-            total_passed=$((total_tests - total_failures - total_errors - total_skipped))
+          total_passed=$((total_tests - total_failures - total_errors - total_skipped))
 
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📈 Totals" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Passed: $total_passed" >> $GITHUB_STEP_SUMMARY
-            echo "- ❌ Failed: $total_failures" >> $GITHUB_STEP_SUMMARY
-            echo "- 💥 Errors: $total_errors" >> $GITHUB_STEP_SUMMARY
-            echo "- ⚠️ Skipped: $total_skipped" >> $GITHUB_STEP_SUMMARY
-            echo "- 📋 Total: $total_tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📈 Totals" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Passed: $total_passed" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Failed: $total_failures" >> $GITHUB_STEP_SUMMARY
+          echo "- 💥 Errors: $total_errors" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚠️ Skipped: $total_skipped" >> $GITHUB_STEP_SUMMARY
+          echo "- 📋 Total: $total_tests" >> $GITHUB_STEP_SUMMARY
 
-            # Fail job if there are any failures or errors
-            if [ "$total_failures" -gt 0 ] || [ "$total_errors" -gt 0 ]; then
-              echo "❌ Some tests failed or errored. Failing job."
-              exit 1
-            fi
-          else
-            echo "⚠️ No reports found (tests may have timed out or crashed)." >> $GITHUB_STEP_SUMMARY
+          if [ "$total_failures" -gt 0 ] || [ "$total_errors" -gt 0 ]; then
+            echo "❌ Some tests failed or errored. Failing job."
             exit 1
           fi
