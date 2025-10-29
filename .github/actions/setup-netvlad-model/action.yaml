@@ -1,0 +1,12 @@
+---
+# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+name: "Setup NetVLAD Model"
+description: "Downloads and verifies the NetVLAD model if not already present"
+runs:
+  using: "composite"
+  steps:
+    - name: Run NetVLAD Model Loader
+      run: python3 autocalibration/tools/ondemand_model_loader.py
+      shell: bash

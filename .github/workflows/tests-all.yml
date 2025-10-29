@@ -55,6 +55,9 @@ jobs:
       - name: "Run Setup"
         uses: ./.github/actions/setup-env
 
+      - name: Setup NetVLAD Model
+        uses: ./.github/actions/setup-netvlad-model
+
       - name: Run Basic Acceptance Tests
         run: make run_basic_acceptance_tests
 
@@ -81,6 +84,9 @@ jobs:
 
       - name: "Run Setup"
         uses: ./.github/actions/setup-env
+
+      - name: Setup NetVLAD Model
+        uses: ./.github/actions/setup-netvlad-model
 
       - name: Run Functional Tests
         run: make run_functional_tests
@@ -109,6 +115,9 @@ jobs:
       - name: "Run Setup"
         uses: ./.github/actions/setup-env
 
+      - name: Setup NetVLAD Model
+        uses: ./.github/actions/setup-netvlad-model
+
       - name: Run Non-Functional Tests
         run: make run_non_functional_tests
 
@@ -135,6 +144,9 @@ jobs:
 
       - name: "Run Setup"
         uses: ./.github/actions/setup-env
+
+      - name: Setup NetVLAD Model
+        uses: ./.github/actions/setup-netvlad-model
 
       - name: Run Metric Tests
         run: make run_metric_tests
@@ -163,6 +175,9 @@ jobs:
       - name: "Run Setup"
         uses: ./.github/actions/setup-env
 
+      - name: Setup NetVLAD Model
+        uses: ./.github/actions/setup-netvlad-model
+
       - name: Run UI Tests
         run: make run_ui_tests
 
@@ -189,6 +204,9 @@ jobs:
 
       - name: "Run Setup"
         uses: ./.github/actions/setup-env
+
+      - name: Setup NetVLAD Model
+        uses: ./.github/actions/setup-netvlad-model
 
       - name: Run Unit Tests
         run: make run_unit_tests
