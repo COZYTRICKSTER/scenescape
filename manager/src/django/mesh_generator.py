@@ -9,6 +9,8 @@ import requests
 import os
 import threading
 from typing import Dict
+import numpy as np
+from scipy.spatial.transform import Rotation
 
 from django.core.files.base import ContentFile
 import paho.mqtt.client as mqtt
@@ -17,6 +19,7 @@ import trimesh
 from scene_common.mqtt import PubSub
 from scene_common.timestamp import get_iso_time
 from scene_common.mesh_util import mergeMesh
+from scene_common.options import QUATERNION
 from scene_common import log
 
 class CameraImageCollector:
@@ -126,6 +129,7 @@ class MappingServiceClient:
         # Get mapping service URL from environment or use default
         self.base_url = os.environ.get('MAPPING_SERVICE_URL', 'http://mapping.scenescape.intel.com:8000')
         self.timeout = 300  # 5 minutes timeout for mesh generation
+        self.health_timeout = 5  # Short timeout for health checks
 
     def reconstruct_mesh(self, images: Dict[str, Dict], model_type='mapanything', mesh_type='mesh'):
         """
@@ -182,6 +186,49 @@ class MappingServiceClient:
             log.error(f"Mapping service request failed: {e}")
             raise
 
+    def check_health(self):
+        """
+        Check if the mapping service is available and healthy.
+        
+        Returns:
+            dict: Health status with 'available' boolean and optional 'models' info
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/health",
+                timeout=self.health_timeout,
+                headers={'Content-Type': 'application/json'}
+            )
+            
+            if response.status_code == 200:
+                health_data = response.json()
+                return {
+                    'available': True,
+                    'status': health_data.get('status', 'unknown'),
+                    'models': health_data.get('models', {})
+                }
+            else:
+                return {
+                    'available': False,
+                    'error': f'HTTP {response.status_code}'
+                }
+                
+        except requests.exceptions.Timeout:
+            return {
+                'available': False,
+                'error': 'Health check timed out'
+            }
+        except requests.exceptions.ConnectionError:
+            return {
+                'available': False, 
+                'error': 'Could not connect to mapping service'
+            }
+        except Exception as e:
+            return {
+                'available': False,
+                'error': str(e)
+            }
+
 
 class MeshGenerator:
     """Main class for generating 3D meshes from scene cameras."""
@@ -220,6 +267,9 @@ class MeshGenerator:
             log.info(f"Starting mesh generation for scene {scene.name}")
             images = self.image_collector.collect_images_for_scene(scene, mqtt_client)
 
+            # Get scene cameras (in same order as images)
+            cameras = scene.sensor_set.filter(type='camera').order_by('id')
+
             log.info(f"Collected {len(images)} images, calling mapping service")
             # Call mapping service to generate mesh
             mapping_result = self.mapping_client.reconstruct_mesh(
@@ -227,6 +277,10 @@ class MeshGenerator:
             )
 
             log.info("Mapping service returned result")
+
+            # Update scene cameras with poses and intrinsics from mapping service
+            if mapping_result.get('success'):
+                self._update_scene_cameras_with_mapping_result(mapping_result, cameras)
 
             # Save the generated mesh to the scene
             if mapping_result.get('success') and mapping_result.get('glb_data'):
@@ -258,6 +312,102 @@ class MeshGenerator:
                 mqtt_client.disconnect()
             except:
                 pass
+
+    def _update_scene_cameras_with_mapping_result(self, mapping_result, cameras):
+        """
+        Update scene cameras with poses and intrinsics returned by mapping service.
+        
+        Args:
+            scene: Scene object containing cameras
+            mapping_result: Result from mapping service containing camera_poses and intrinsics
+            cameras: QuerySet of camera objects in enumeration order
+        """
+        try:
+            camera_poses = mapping_result.get('camera_poses', [])
+            intrinsics_list = mapping_result.get('intrinsics', [])
+            
+            if not camera_poses or not intrinsics_list:
+                log.warning("Mapping service did not return camera poses or intrinsics")
+                return
+                
+            if len(camera_poses) != len(intrinsics_list):
+                log.error(f"Mismatch in mapping service results: {len(camera_poses)} poses vs {len(intrinsics_list)} intrinsics")
+                return
+                
+            cameras_list = list(cameras)
+            if len(cameras_list) != len(camera_poses):
+                log.error(f"Camera count mismatch: {len(cameras_list)} scene cameras vs {len(camera_poses)} mapping results")
+                return
+            
+            log.info(f"Updating {len(cameras_list)} cameras with mapping service results")
+            
+            # Update each camera with corresponding pose and intrinsics
+            for i, camera in enumerate(cameras_list):
+                try:
+                    pose_data = camera_poses[i]
+                    intrinsics_matrix = intrinsics_list[i]
+                    
+                    # Convert mapping service format to Django camera format
+                    self._update_camera_pose_and_intrinsics(camera, pose_data, intrinsics_matrix)
+                    
+                    log.info(f"Updated camera {camera.sensor_id} with new pose and intrinsics")
+                    
+                except Exception as e:
+                    log.error(f"Failed to update camera {camera.sensor_id}: {e}")
+                    
+        except Exception as e:
+            log.error(f"Failed to update scene cameras: {e}")
+
+    def _update_camera_pose_and_intrinsics(self, camera, pose_data, intrinsics_matrix):
+        """
+        Update a single camera with new pose and intrinsics.
+        
+        Args:
+            camera: Camera model instance
+            pose_data: Dictionary with 'rotation' (quaternion) and 'translation' from mapping service
+            intrinsics_matrix: 3x3 intrinsics matrix from mapping service
+        """        
+        try:
+            # Extract pose data
+            rotation_quat = pose_data['rotation']  # [w, x, y, z]
+            translation = pose_data['translation']  # [x, y, z]
+            
+            # Transform from OpenCV coordinates (API output) to SceneScape Z-up coordinates
+            rotation_quat_scenescape, translation_scenescape = self._transform_opencv_to_scenescape_coordinates(
+                rotation_quat, translation
+            )
+            
+            # Extract intrinsics (3x3 matrix -> fx, fy, cx, cy)
+            intrinsics_array = np.array(intrinsics_matrix)
+            fx = intrinsics_array[0, 0]
+            fy = intrinsics_array[1, 1] 
+            cx = intrinsics_array[0, 2]
+            cy = intrinsics_array[1, 2]
+            
+            # Update camera model fields
+            camera.cam.intrinsics_fx = fx
+            camera.cam.intrinsics_fy = fy
+            camera.cam.intrinsics_cx = cx
+            camera.cam.intrinsics_cy = cy
+            
+            # Update camera transform using QUATERNION format
+            # Django QUATERNION format expects: [translation_x, translation_y, translation_z, 
+            #                                   rotation_x, rotation_y, rotation_z, rotation_w, 
+            #                                   scale_x, scale_y, scale_z]
+            # Use transformed coordinates and reorder quaternion from [w, x, y, z] to [x, y, z, w]
+            camera.cam.transforms = [
+                translation_scenescape[0], translation_scenescape[1], translation_scenescape[2],  # translation
+                rotation_quat_scenescape[1], rotation_quat_scenescape[2], rotation_quat_scenescape[3], rotation_quat_scenescape[0],  # quaternion [x, y, z, w]
+                1.0, 1.0, 1.0  # scale (default to 1.0)
+            ]
+            camera.cam.transform_type = QUATERNION  # Use quaternion transform type
+            
+            # Save the camera
+            camera.cam.save()
+            
+        except Exception as e:
+            log.error(f"Error updating camera {camera.sensor_id}: {e}")
+            raise
 
     def _save_mesh_to_scene(self, scene, glb_data_base64):
         """
@@ -294,3 +444,49 @@ class MeshGenerator:
         except Exception as e:
             log.error(f"Failed to save mesh to scene: {e}")
             raise Exception(f"Failed to save mesh file: {e}")
+
+    def _transform_opencv_to_scenescape_coordinates(self, rotation_quat, translation):
+        """
+        Transform camera pose from OpenCV coordinate system to SceneScape Z-up coordinate system.
+        
+        OpenCV coordinates (API output):
+        - X: right, Y: down, Z: forward (into scene)
+        
+        SceneScape Z-up coordinates:  
+        - X: right, Y: forward, Z: up (world coordinates)
+        
+        Args:
+            rotation_quat: Quaternion [w, x, y, z] in OpenCV coordinates
+            translation: Translation [x, y, z] in OpenCV coordinates
+            
+        Returns:
+            tuple: (transformed_quaternion, transformed_translation) for SceneScape coordinates
+        """
+        # Create coordinate transformation matrix: OpenCV -> SceneScape Z-up
+        # OpenCV (X:right, Y:down, Z:forward) -> SceneScape (X:right, Y:forward, Z:up)  
+        coord_transform = np.array([
+            [1,  0,  0],   # X stays the same (right)
+            [0,  0,  1],   # Y becomes old Z (forward)
+            [0, -1,  0]    # Z becomes old -Y (up)
+        ])
+        
+        # Transform translation
+        translation_np = np.array(translation)
+        translation_scenescape = coord_transform @ translation_np
+        
+        # Transform rotation quaternion
+        # Convert quaternion to rotation matrix, transform, then back to quaternion
+        
+        # Convert [w, x, y, z] to scipy format [x, y, z, w]
+        quat_scipy = [rotation_quat[1], rotation_quat[2], rotation_quat[3], rotation_quat[0]]
+        rotation_matrix = Rotation.from_quat(quat_scipy).as_matrix()
+        
+        # Apply coordinate transformation: R' = T * R * T^-1
+        rotation_matrix_scenescape = coord_transform @ rotation_matrix @ coord_transform.T
+        
+        # Convert back to quaternion in [w, x, y, z] format  
+        quat_scenescape_scipy = Rotation.from_matrix(rotation_matrix_scenescape).as_quat()
+        rotation_quat_scenescape = [quat_scenescape_scipy[3], quat_scenescape_scipy[0], 
+                                   quat_scenescape_scipy[1], quat_scenescape_scipy[2]]
+        
+        return rotation_quat_scenescape, translation_scenescape.tolist()

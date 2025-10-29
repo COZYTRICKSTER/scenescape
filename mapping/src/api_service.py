@@ -14,6 +14,12 @@ import tempfile
 import time
 from typing import Dict, Any
 
+<<<<<<< HEAD
+=======
+import numpy as np
+from scipy.spatial.transform import Rotation
+
+>>>>>>> a73f5baff3ba07c7fa3be053cdea41f7f129ed30
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -207,9 +213,13 @@ def reconstruct_3d():
         # Run inference using plugin architecture
         logger.info(f"Starting {model_type} inference...")
         result = run_model_inference(model_type, images)
+<<<<<<< HEAD
         
         logger.info(f"Inference completed in {time.time() - start_time:.2f} seconds")
         
+=======
+                
+>>>>>>> a73f5baff3ba07c7fa3be053cdea41f7f129ed30
         # Generate GLB file if requested
         glb_data = None
         if output_format == "glb":
@@ -275,7 +285,7 @@ def list_models():
         "camera_pose_format": {
             "rotation": "quaternion [w, x, y, z]",
             "translation": "vector [x, y, z]",
-            "coordinate_system": "OpenCV (camera-to-world transformation)"
+            "coordinate_system": "OpenCV (camera-to-world transformation, standard CV coordinates)"
         }
     }
     return jsonify(models_data), 200
