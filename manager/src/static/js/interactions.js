@@ -32,15 +32,12 @@ function SetupInteractions(
     if (selectedCamera !== obj) {
       if (selectedCamera) selectedCamera.unselect();
       selectedCamera = obj;
-      if (selectedCamera !== null) selectedCamera.onClick(openFolder);
-    } else {
-      // Same camera clicked - handle folder toggle or deselect
-      if (selectedCamera !== null) selectedCamera.onClick(openFolder);
-      if (!openFolder) {
-        selectedCamera.unselect();
-        selectedCamera = null;
-      }
+    } else if (!openFolder) {
+      selectedCamera.unselect();
+      selectedCamera = null;
     }
+
+    if (selectedCamera !== null) selectedCamera.onClick(openFolder);
 
     return;
   }

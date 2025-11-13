@@ -500,9 +500,7 @@ export default class SceneCamera extends THREE.Object3D {
     this.controlsFolder.$title.addEventListener(
       "click",
       ((event) => {
-        // Check if folder will be open after the click (it toggles, so check current state and invert)
-        const willBeOpen = !this.controlsFolder._closed;
-        camerasFolder.setSelectedCamera(this, willBeOpen);
+        camerasFolder.setSelectedCamera(this);
       }).bind(this),
     );
 
@@ -1117,8 +1115,7 @@ export default class SceneCamera extends THREE.Object3D {
   }
 
   onClick(open) {
-    // Show transform controls only when folder is opened
-    this.setTransformControlVisibility(open);
+    this.setTransformControlVisibility(true);
     this.add(this.calibPoints);
     this.executeOnControl("calibration points visibility", (control) => {
       control[0].setValue(true);
