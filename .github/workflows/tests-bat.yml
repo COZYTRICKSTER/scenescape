@@ -127,11 +127,19 @@ jobs:
         with:
           system-prune: "true"
 
+      - name: "Pre-clean workspace"
+        run: |
+          shopt -s dotglob || true
+          rm -rf "$GITHUB_WORKSPACE"/* || true
+          rm -rf "$GITHUB_WORKSPACE"/.[!.]* || true
+          rm -rf "$GITHUB_WORKSPACE"/..?* || true
+
       - name: "Checkout Repository"
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
           persist-credentials: false
+          clean: false
 
       - name: "Run Basic Acceptance Tests (BAT)"
         run: |
