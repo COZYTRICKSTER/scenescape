@@ -10,14 +10,15 @@ runs:
     - name: Rename logs to remove colons
       shell: bash
       run: |
-        set +e
-        find . -type f -path "**/test_data/*.log" | while read -r file; do
-          newfile="$(dirname "$file")/$(basename "$file" | tr ':' '-')"
-          if [ "$file" != "$newfile" ]; then
-            mv "$file" "$newfile"
+        set -euo pipefail
+        while IFS= read -r -d '' file; do
+          dir="$(dirname "$file")"
+          base="$(basename "$file")"
+          safe="$(printf '%s' "$base" | tr ':"<>|*?' '--------')"
+          if [[ "$base" != "$safe" ]]; then
+            mv -f -- "$file" "$dir/$safe"
           fi
-        done
-        exit 0
+        done < <(find . -type f -path '*/test_data/*' -name '*.log' -print0)
 
     - name: Upload Test Reports
       uses: actions/upload-artifact@v4
