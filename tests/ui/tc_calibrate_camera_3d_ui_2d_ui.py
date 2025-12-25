@@ -6,6 +6,8 @@
 import os
 import tests.ui.common_ui_test_utils as common
 from scene_common import log
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from tests.ui import UserInterfaceTest
 from tests.ui.browser import By
 
@@ -58,27 +60,34 @@ class Scene3dUserInterfaceTest(UserInterfaceTest):
       # 3D UI
       # atag-qcam1
       log.info("Expand atag-qcam1 controls.")
-      self.clickOnElement("atag-qcam1-control-panel", delay=WAIT_SEC)
+      WebDriverWait(self.browser, self.waitTime).until(
+          EC.element_to_be_clickable((By.ID, "atag-qcam1-control-panel"))).click()
 
       log.info("Press auto calibrate button of atag-qcam1.")
-      self.clickOnElement("lil-gui-name-29", delay=WAIT_SEC)
+      WebDriverWait(self.browser, self.waitTime).until(
+          EC.element_to_be_clickable((By.ID, "lil-gui-name-29"))).click()
 
       log.info("Press save button of atag-qcam1.")
-      self.clickOnElement("atag-qcam1-save-camera", delay=WAIT_SEC)
+      WebDriverWait(self.browser, self.waitTime).until(
+          EC.element_to_be_clickable((By.ID, "atag-qcam1-save-camera"))).click()
 
       # atag-qcam2
       log.info("Expand atag-qcam2 controls.")
-      self.clickOnElement("atag-qcam2-control-panel", delay=WAIT_SEC)
+      WebDriverWait(self.browser, self.waitTime).until(
+          EC.element_to_be_clickable((By.ID, "atag-qcam2-control-panel"))).click()
 
       log.info("Press auto calibrate button of atag-qcam2.")
-      self.clickOnElement("lil-gui-name-54", delay=WAIT_SEC)
+      WebDriverWait(self.browser, self.waitTime).until(
+          EC.element_to_be_clickable((By.ID, "lil-gui-name-54"))).click()
 
       log.info("Press save button of atag-qcam2.")
-      self.clickOnElement("atag-qcam2-save-camera", delay=WAIT_SEC)
+      WebDriverWait(self.browser, self.waitTime).until(
+          EC.element_to_be_clickable((By.ID, "atag-qcam2-save-camera"))).click()
 
       # Open 2D UI
       log.info("Navigate to the 2D Scene detail page.")
-      self.clickOnElement("scene-detail-button", delay=WAIT_SEC)
+      WebDriverWait(self.browser, self.waitTime).until(
+          EC.element_to_be_clickable((By.ID, "scene-detail-button"))).click()
 
       # 2D UI
       # atag-qcam1
@@ -90,10 +99,12 @@ class Scene3dUserInterfaceTest(UserInterfaceTest):
       assert has_points, "No camera pose found after 3D calibration"
 
       log.info("Press Auto Calibrate of atag-qcam1.")
-      self.clickOnElement("auto-autocalibration", delay=WAIT_SEC)
+      WebDriverWait(self.browser, self.waitTime).until(
+          EC.element_to_be_clickable((By.ID, "auto-autocalibration"))).click()
 
       log.info("Press Save Camera of atag-qcam1.")
-      self.clickOnElement("top_save", delay=WAIT_SEC)
+      WebDriverWait(self.browser, self.waitTime).until(
+          EC.element_to_be_clickable((By.ID, "top_save"))).click()
 
       log.info("Verify calibration points after 2D auto-calibration of atag-qcam1.")
       self.navigateDirectlyToPage(cam_url_1) # Page goes back to scene after save
@@ -109,10 +120,12 @@ class Scene3dUserInterfaceTest(UserInterfaceTest):
       assert has_points, "No camera pose found after 3D calibration"
 
       log.info("Press Auto Calibrate of atag-qcam2.")
-      self.clickOnElement("auto-autocalibration", delay=WAIT_SEC)
+      WebDriverWait(self.browser, self.waitTime).until(
+          EC.element_to_be_clickable((By.ID, "auto-autocalibration"))).click()
 
       log.info("Press Save Camera of atag-qcam2.")
-      self.clickOnElement("top_save", delay=WAIT_SEC)
+      WebDriverWait(self.browser, self.waitTime).until(
+          EC.element_to_be_clickable((By.ID, "top_save"))).click()
 
       log.info("Verify calibration points after 2D auto-calibration of atag-qcam2.")
       self.navigateDirectlyToPage(cam_url_2) # Page goes back to scene after save
