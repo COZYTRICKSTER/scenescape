@@ -82,7 +82,6 @@ tests: \
   standard-tests \
 
 release-tests: \
-  additional-floor-plans \
   camera-deletion \
   different-formats-maps \
   live-view-button \
@@ -101,7 +100,6 @@ _broken-features: \
 
 broken-tests: \
   3d-ui-calibration-points \
-  april-tag-setup \
   distance-msoce \
   geospatial-ingest-publish \
   delete-sensor-mqtt-api \
@@ -112,7 +110,6 @@ randomly-failing-tests:
 
 # Not sorted alphabetically on purpose
 basic-acceptance-tests: \
-  deploy \
   geometry-conformance \
   metric-tests \
   out-of-box \
@@ -141,7 +138,6 @@ functional-tests:
 _functional-tests: \
   add-delete-3d-object-api \
   add-orphaned-cameras \
-  additional-floor-plans-api \
   api-large-strings \
   calibrate-all-sensor-types-api \
   camera-deletion-api \
@@ -226,7 +222,6 @@ _unit-tests: \
   geospatial-unit \
   markerless-unit \
   robot-vision-unit \
-  scene-unit \
   scenescape-unit \
   schema-unit \
   singleton-sensor-unit \
@@ -235,7 +230,7 @@ _unit-tests: \
   views-unit \
 
 include Makefile.sscape Makefile.functional Makefile.perf \
-        Makefile.external_models Makefile.reports Makefile.user_interface Makefile.metric
+        Makefile.reports Makefile.user_interface Makefile.metric
 
 # Recipes below must be in alphabetical order
 malformed-json:
@@ -260,17 +255,6 @@ build-time: # NEX-T12520
 			2>&1 | tee -i $(LOGFILE) \
 		; echo "MAKE_TARGET: $@" | tee -ia $(LOGFILE) \
 		; echo END TEST $@
-
-deploy: # NEX-T10422
-	$(eval LOGFILE=$(TEST_DATA)/code_build/$@-$(shell date -u +"%F-%T").log)
-	@set -ex \
-	  ; echo RUNNING TEST $@ \
-	  ; cd .. \
-	  ; mkdir -p $(shell dirname $(LOGFILE)) \
-	  ; SKIP_BRINGUP=1 REQUIRED_FPS=0 CERTPASS=$$(openssl rand -base64 12) SKIPYML=1 SUPASS=$(SUPASS) ./deploy.sh 2>&1 | tee -i $(LOGFILE) \
-	  ; make init-sample-data \
-	  ; echo "MAKE_TARGET: $@" | tee -ia $(LOGFILE) \
-	  ; echo END TEST $@
 
 system-stability: # NEX-T10411
 	$(eval HOURS ?= 24)
