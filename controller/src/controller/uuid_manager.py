@@ -3,13 +3,15 @@
 
 import collections
 import concurrent.futures
+import os
 import threading
 
 from controller.vdms_adapter import VDMSDatabase
+from controller.milvus_adapter import MilvusDatabase
 from scene_common import log
 from scene_common.timestamp import get_epoch_time
 
-DEFAULT_DATABASE = "VDMS"
+DEFAULT_DATABASE = os.getenv("REID_DATABASE", "VDMS")
 DEFAULT_SIMILARITY_THRESHOLD = 60
 DEFAULT_MINIMUM_BBOX_AREA = 5000
 DEFAULT_MINIMUM_FEATURE_COUNT = 12
@@ -19,6 +21,7 @@ DEFAULT_MAX_SIMILARITY_QUERIES_TRACKED = 10
 
 available_databases = {
   "VDMS": VDMSDatabase,
+  "Milvus": MilvusDatabase,
 }
 
 class UUIDManager:
