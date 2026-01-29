@@ -10,7 +10,7 @@ from scene_common.rest_client import RESTClient
 from scene_common.mqtt import PubSub
 from scene_common import log
 
-TEST_WAIT_TIME = 5 * 60  # 10 minutes in seconds
+TEST_WAIT_TIME = 100 #5 * 60
 
 connected = False
 detection_count = {

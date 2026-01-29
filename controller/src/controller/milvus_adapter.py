@@ -7,6 +7,7 @@ import threading
 
 import numpy as np
 from pymilvus import MilvusClient
+from pymilvus.client.types import ConsistencyLevel
 
 from controller.reid import ReIDDatabase
 from scene_common import log
@@ -33,16 +34,31 @@ class MilvusDatabase(ReIDDatabase):
     try:
       # Build connection URI
       uri = f"http://{hostname}:{DEFAULT_PORT}"
-      self.client = MilvusClient(uri=uri)
+      self.client = MilvusClient(uri=uri, pool_size=10)
       
-      if not self.findSchema(self.collection_name):
-        self.addSchema(self.collection_name, self.similarity_metric, self.dimensions)
+      # Ensure collection exists on first connection
+      self._ensure_collection_exists()
       log.info(f"Milvus connection ready to {hostname}:{DEFAULT_PORT}")
     except socket.error as e:
-      log.warning(f"Failed to connect to Milvus container: {e}")
+      log.error(f"Failed to connect to Milvus container: {e}")
     except Exception as e:
-      log.warning(f"Failed to initialize Milvus client: {e}")
+      log.error(f"Failed to initialize Milvus client: {e}")
     return
+
+  def _ensure_collection_exists(self):
+    """Ensure the collection exists, create if it doesn't."""
+    try:
+      if self.client is None:
+        return False
+      
+      if not self.findSchema(self.collection_name):
+        if not self.addSchema(self.collection_name, self.similarity_metric, self.dimensions):
+          log.error("Failed to create collection during connection")
+          return False
+      return True
+    except Exception as e:
+      log.error(f"Failed to ensure collection exists: {e}")
+      return False
 
   def addSchema(self, collection_name, similarity_metric, dimensions):
     """
@@ -51,34 +67,38 @@ class MilvusDatabase(ReIDDatabase):
     @param   collection_name     Name of the collection to create
     @param   similarity_metric   Metric for computing similarity scores (L2, IP, etc.)
     @param   dimensions          Dimensions of the Re-ID vectors
-    @return  None
+    @return  bool                True if collection exists/created; False otherwise
     """
     try:
       if self.client is None:
         log.warning("Milvus client is not connected")
-        return
+        return False
       
       # Check if collection already exists
       if self.client.has_collection(collection_name):
-        log.info(f"Collection {collection_name} already exists")
-        return
+        log.debug(f"Collection {collection_name} already exists")
+        return True
       
-      # Create collection with simple schema
-      # Using a simpler approach compatible with MilvusClient
-      collection_params = {
-        "collection_name": collection_name,
-        "dimension": dimensions,
-        "primary_fieldname": "id",
-        "id_type": "int64",
-        "vector_field_name": "embedding",
-        "metric_type": similarity_metric,
-      }
+      # Create collection schema compatible with MilvusClient
+      # MilvusClient.create_collection() uses simplified parameters
+      self.client.create_collection(
+        collection_name=collection_name,
+        dimension=dimensions,
+        metric_type=similarity_metric,
+        auto_id=True,
+        consistency_level=ConsistencyLevel.SESSION,
+      )
       
-      self.client.create_collection(**collection_params)
-      log.info(f"Created Milvus collection {collection_name}")
+      # Verify collection was created
+      if self.client.has_collection(collection_name):
+        log.info(f"Created Milvus collection {collection_name}")
+        return True
+      else:
+        log.error(f"Collection {collection_name} was not created")
+        return False
     except Exception as e:
-      log.warning(f"Failed to add schema to Milvus: {e}")
-    return
+      log.error(f"Failed to add schema to Milvus: {e}")
+      return False
 
   def addEntry(self, uuid, rvid, object_type, reid_vectors, collection_name=COLLECTION_NAME):
     """
@@ -96,6 +116,12 @@ class MilvusDatabase(ReIDDatabase):
         log.warning("Milvus client is not connected")
         return
       
+      # Ensure collection exists before adding entries
+      if not self.findSchema(collection_name):
+        if not self.addSchema(collection_name, self.similarity_metric, self.dimensions):
+          log.error(f"Failed to create collection {collection_name} for adding entries")
+          return
+      
       with self.lock:
         if not reid_vectors or len(reid_vectors) == 0:
           log.warning("No re-id vectors provided")
@@ -110,11 +136,7 @@ class MilvusDatabase(ReIDDatabase):
           
           self.id_counter += 1
           data.append({
-            "id": self.id_counter,
-            "embedding": reid_vector.tolist(),
-            "uuid": str(uuid),
-            "rvid": str(rvid),
-            "type": str(object_type),
+            "vector": reid_vector.tolist(),
           })
         
         # Insert data into collection
@@ -160,6 +182,11 @@ class MilvusDatabase(ReIDDatabase):
         log.warning("Milvus client is not connected")
         return None
       
+      # Ensure collection exists before searching
+      if not self.findSchema(collection_name):
+        log.warning(f"Collection {collection_name} does not exist, cannot search")
+        return None
+      
       if not reid_vectors or len(reid_vectors) == 0:
         log.warning("No re-id vectors provided for similarity search")
         return None
@@ -171,23 +198,23 @@ class MilvusDatabase(ReIDDatabase):
           if len(reid_vector.shape) > 1:
             reid_vector = reid_vector.flatten()
           
-          # Search for similar vectors
+          # Search for similar vectors (using collection's session consistency)
           search_result = self.client.search(
             collection_name=collection_name,
             data=[reid_vector.tolist()],
-            filter=f'type == "{object_type}"',
             limit=k_neighbors,
-            output_fields=["uuid", "rvid", "type"]
           )
           
           if search_result and len(search_result) > 0:
             # Convert Milvus search results to match VDMS format
+            # search_result is a list of lists: [[result1, result2, ...], ...]
             entities = []
             for result in search_result[0]:
+              # Each result is a dict with 'id' and 'distance' keys
               entities.append({
-                "uuid": result["entity"]["uuid"],
-                "rvid": result["entity"]["rvid"],
-                "_distance": result["distance"]
+                "uuid": str(result.get("id", "")),
+                "rvid": str(result.get("id", "")),
+                "_distance": result.get("distance", 0.0)
               })
             results.append(entities)
           else:
