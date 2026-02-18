@@ -129,7 +129,7 @@ class MappingServiceClient:
   def __init__(self):
     # Get mapping service URL from environment or use default
     self.base_url = os.environ.get('MAPPING_SERVICE_URL', 'https://mapping.scenescape.intel.com:8444')
-    self.timeout_per_camera = 30  # timeout (in seconds) per camera for mesh generation
+    self.timeout_per_camera = 100  # timeout (in seconds) per camera for mesh generation
     self.health_timeout = 5  # Short timeout for health checks
 
     # Obtain rootcert for HTTPS requests, same logic as models.py
@@ -294,6 +294,14 @@ class MeshGenerator:
       if mapping_result.get('success'):
         self._updateSceneCamerasWithMappingResult(mapping_result, cameras)
 
+      from django.db import transaction
+
+      if mapping_result.get("success"):
+          with transaction.atomic():
+              self._updateSceneCamerasWithMappingResult(mapping_result, cameras)
+
+    # now do mesh stuff; if it fails later, camera updates are already committed
+
       # Save the generated mesh to the scene
       if mapping_result.get('success') and mapping_result.get('glb_data'):
         # Save mesh and get the transformation applied during alignment
@@ -413,8 +421,14 @@ class MeshGenerator:
       ]
       camera.cam.transform_type = QUATERNION  # Use quaternion transform type
 
-      # Save the camera
       camera.cam.save()
+      print("camera name is: ", camera.cam.name)
+      print("camera.cam.transforms: ", camera.cam.transforms)
+      print("Saved: ", [
+        translation[0], translation[1], translation[2],  # translation
+        rotation_quat[0], rotation_quat[1], rotation_quat[2], rotation_quat[3],  # quaternion [x, y, z, w]
+        1.0, 1.0, 1.0  # scale (default to 1.0)
+      ])
 
     except Exception as e:
       log.error(f"Error updating camera {camera.sensor_id}: {e}")

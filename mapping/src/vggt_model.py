@@ -505,6 +505,14 @@ class VGGTModel(ReconstructionModel):
 
     extrinsic_matrices = predictions["extrinsic"]  # Shape: (S, 4, 4) - world-to-camera
 
+    rotation_x_180 = np.array([
+      [1,  0,  0, 0],
+      [0, -1,  0, 0],
+      [0,  0, -1, 0],
+      [0,  0,  0, 1],
+    ], dtype=np.float32)
+
+
     for i in range(extrinsic_matrices.shape[0]):
       # VGGT outputs extrinsics (world-to-camera), but we want camera poses (camera-to-world)
       # Convert by taking the inverse of the extrinsic matrix
@@ -518,6 +526,7 @@ class VGGTModel(ReconstructionModel):
 
       # Invert to get camera-to-world (camera pose)
       camera_to_world = np.linalg.inv(world_to_camera)
+      camera_to_world = rotation_x_180 @ camera_to_world
 
       intrinsic_matrix = original_intrinsics[i]  # Use scaled intrinsics
 
