@@ -58,6 +58,9 @@ jobs:
         uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.5
         with:
           version: "v0.68.2"
+      - name: "Print available disk space after cleanup"
+        if: always()
+        run: df -h
       - name: "Build images"
         id: build_images
         run: |
@@ -82,6 +85,9 @@ jobs:
             fi
           done <<< $(cat images.txt)
           exit $EXIT_CODE
+      - name: "Print available disk space after cleanup"
+        if: always()
+        run: df -h
 
   trivy-critical-filesystem-scan:
     name: "Run Trivy Critical Filesystem Scan"
