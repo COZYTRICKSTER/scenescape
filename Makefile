@@ -66,7 +66,7 @@ default: build-core
 build-core: init-secrets build-core-images install-models
 
 .PHONY: build-all
-build-all: init-secrets build-all-images install-models
+build-all: init-secrets build-all-images
 
 .PHONY: build-experimental
 build-experimental: build-experimental-images
