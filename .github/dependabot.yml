@@ -11,6 +11,7 @@ updates:
       interval: "monthly"
     commit-message:
       prefix: "GitHub Actions"
+    target-branch: "release-2026.0"
     groups:
       github-actions-dependency:
         applies-to: version-updates
@@ -28,6 +29,7 @@ updates:
       interval: "monthly"
     commit-message:
       prefix: "Helm charts"
+    target-branch: "release-2026.0"
     reviewers:
       - "saratpoluri"
       - "dmytroye"
@@ -52,6 +54,7 @@ updates:
       interval: "monthly"
     commit-message:
       prefix: "Dockerfile"
+    target-branch: "release-2026.0"
     reviewers:
       - "saratpoluri"
       - "dmytroye"
@@ -70,6 +73,7 @@ updates:
       interval: "monthly"
     commit-message:
       prefix: "Docker Compose"
+    target-branch: "release-2026.0"
     reviewers:
       - "saratpoluri"
       - "dmytroye"
@@ -94,6 +98,7 @@ updates:
       interval: "monthly"
     commit-message:
       prefix: "pip"
+    target-branch: "release-2026.0"
     reviewers:
       - "saratpoluri"
       - "dmytroye"
