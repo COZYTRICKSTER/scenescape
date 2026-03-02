@@ -1,5 +1,5 @@
 ---
-# SPDX-FileCopyrightText: (C) 2025 Intel Corporation
+# SPDX-FileCopyrightText: (C) 2025-2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
 name: "Setup Environment"
@@ -22,14 +22,17 @@ runs:
         restore-keys: |
           venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}
 
-    - name: Run Secrets and Certificates Initialization
+
+    - name: Initialize secrets and certificates (idempotent)
       run: |
-        git clean -fdx
-        make clean-all
-        make -C tools/certificates clean
+        # Generates secrets and certificates required by tests.
+        # This is the same target your Makefile already provides.
         make init-secrets
       shell: bash
 
-    - name: Build scene_common
-      run: make -C scene_common
+    - name: Build Docker base image
+      run: |
+        # Produces the scenescape-common-base image required by service/test images.
+        # This target is defined in your top-level Makefile.
+        make build-common
       shell: bash
