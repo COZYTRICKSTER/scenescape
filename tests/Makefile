@@ -118,6 +118,8 @@ basic-acceptance-tests: \
   mqtt-tripwire \
   unit-tests \
   auto-calibration-api \
+  pipeline-runner-people \
+  pipeline-runner-vehicles \
 
 # Temp K8s BAT target
 # Not sorted alphabetically on purpose
