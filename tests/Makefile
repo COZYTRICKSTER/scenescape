@@ -47,9 +47,6 @@ define common-recipe =
 	  ; if [ x$(REQUIRE_SUPASS) = xtrue ] ; then \
 	      EXTRAS="--password=$(SUPASS)"; \
 	  fi \
-	  ; if [ ! -z "$(AUTH_USER)" ]; then \
-	      EXTRAS="$${EXTRAS} $(AUTH_USER)"; \
-	  fi \
 	  ; echo RUNNING COMMON TEST $@ \
 	  ; cd .. \
 	  ; EXAMPLEDB=$(EXAMPLEDB) \
