@@ -110,15 +110,9 @@ randomly-failing-tests: \
 
 # Not sorted alphabetically on purpose
 basic-acceptance-tests: \
-  out-of-box \
-  geometry-conformance \
-  metric-tests \
-  bounding-box \
-  mqtt-roi \
-  mqtt-tripwire \
-  unit-tests \
-  auto-calibration-api \
-  openapi-validation \
+  idc-error-metric \
+  velocity-metric \
+  msoce-metric \
 
 # Temp K8s BAT target
 # Not sorted alphabetically on purpose
